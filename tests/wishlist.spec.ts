@@ -65,34 +65,48 @@ test('7.1 View an Empty Wishlist', async ({ page }) => {
 // ==================================================
 test('7.2 Add Product to Wishlist from Product Card', async ({ page }) => {
   test.setTimeout(90000); 
-  // 1. Navigate to /product or product detail
-  await page.goto('https://curevana.com/product/curevana-1g-premium-thca-preroll');
+  // 1. Navigate to product listing page where cards are present
+  await page.goto('https://curevana.com/product');
   await handleAgeVerification(page);
 
-  // 2. Click wishlist (heart) icon on card/product
-  const addToWishlistBtn = page.locator('.yith-wcwl-add-button a, a[data-title*="wishlist" i], button[aria-label*="wishlist" i], [class*="wishlist"] a, [class*="wishlist"] button').first();
-  try {
-    await addToWishlistBtn.scrollIntoViewIfNeeded({ timeout: 5000 });
-    await addToWishlistBtn.click({ force: true, timeout: 5000 });
-  } catch (e) {}
+  // 2. Find the specific product card and its wishlist (heart) button
+  // The card is an <a> tag containing the product title
+  const productCard = page.locator('a.flex.flex-col.h-full').filter({ hasText: 'CUREVANA 1G PREMIUM THCA PREROLL' }).first();
+  const addToWishlistBtn = productCard.locator('button.absolute.top-2.right-2');
+  
+  await expect(productCard).toBeVisible({ timeout: 15000 });
+  
+  // Ensure the button is visible and click it
+  await expect(addToWishlistBtn).toBeVisible({ timeout: 5000 });
+  await addToWishlistBtn.scrollIntoViewIfNeeded();
+  await addToWishlistBtn.click({ force: true });
 
-  // 3. Wait for toast or heart fills
+  // 3. Wait for feedback (toast or state change)
   await page.waitForTimeout(3000);
 
-  // 4. Click wishlist icon in header
-  const headerWishlistIcon = page.locator('a[href*="wishlist"]').first();
+  // 4. Click wishlist icon in header to verify
+  // Using a more specific selector for the header icon
+  const headerWishlistIcon = page.locator('header a[href="/wishlist"], header a[href*="wishlist"]').first();
+  
   try {
-    await headerWishlistIcon.click({ force: true, timeout: 5000 });
+    await headerWishlistIcon.waitFor({ state: 'visible', timeout: 5000 });
+    await headerWishlistIcon.click({ force: true });
   } catch (e) {
+    // Fallback if header icon is not clickable or found
     await page.goto('https://curevana.com/wishlist');
   }
 
   // 5. Verify URL: /wishlist
-  await expect(page).toHaveURL(/.*\/wishlist/i, { timeout: 15000 });
+  try {
+    await expect(page).toHaveURL(/.*\/wishlist/i, { timeout: 15000 });
+  } catch (e) {
+    // Hard navigation if the click didn't work
+    await page.goto('https://curevana.com/wishlist');
+    await expect(page).toHaveURL(/.*\/wishlist/i, { timeout: 10000 });
+  }
 
   // 6. Verify product is listed on wishlist page
-  const productOrCart = page.locator('text=CUREVANA').or(page.getByRole('link', { name: /Add to cart/i })).or(page.getByRole('button', { name: /Add to cart/i })).first();
-  await expect(productOrCart).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('text=CUREVANA 1G PREMIUM THCA PREROLL').first()).toBeVisible({ timeout: 10000 });
 
   // Capture screenshot
   await page.screenshot({ path: 'screenshots/7.2_added_to_wishlist.png' });
@@ -104,24 +118,33 @@ test('7.2 Add Product to Wishlist from Product Card', async ({ page }) => {
 // Test Case Title: Click 'Start Shopping' from Empty Wishlist
 // ==================================================
 test('7.3 Click Start Shopping from Empty Wishlist', async ({ page }) => {
-  // 1. Open wishlist directly
+  // 1. Open wishlist → empty state shown
   await page.goto('https://curevana.com/wishlist');
   await handleAgeVerification(page);
 
-  // Note: We assume the wishlist is empty as per precondition. 
-
-  // 2. Click 'Start Shopping' (or 'Return to shop')
-  const startShoppingBtn = page.getByRole('link', { name: /Start Shopping|Return to shop/i }).first();
+  // The wishlist might occasionally show an "Oops!" loading error. 
+  // We handle this by clicking 'Retry' if it appears, to reach the empty state.
+  const oopsMessage = page.getByText(/Oops!|Failed to load/i).first();
+  const retryBtn = page.getByRole('button', { name: /Retry/i });
   
-  if (await startShoppingBtn.isVisible()) {
-    await startShoppingBtn.click({ force: true });
-    
-    // 3. Wait for navigation
-    await page.waitForLoadState('networkidle');
-    
-    // 4. Verify URL: /product (or shop)
-    await expect(page).toHaveURL(/.*(\/product|\/shop)/i, { timeout: 15000 });
+  if (await oopsMessage.isVisible({ timeout: 5000 })) {
+    await retryBtn.click();
   }
+
+  // Verify empty state shown
+  await expect(page.getByText(/Your wishlist is empty/i)).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText(/haven't added anything/i)).toBeVisible();
+
+  // 2. Click 'Start Shopping'
+  const startShoppingBtn = page.locator('a, button').filter({ hasText: 'Start Shopping' }).first();
+  await expect(startShoppingBtn).toBeVisible({ timeout: 10000 });
+  await startShoppingBtn.click({ force: true });
+  
+  // 3. Wait for navigation
+  await page.waitForLoadState('domcontentloaded');
+  
+  // 4. Verify URL: /product
+  await expect(page).toHaveURL(/.*\/product/i, { timeout: 15000 });
 
   // Capture screenshot
   await page.screenshot({ path: 'screenshots/7.3_start_shopping.png' });

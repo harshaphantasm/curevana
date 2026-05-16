@@ -37,7 +37,7 @@ async function handleAgeVerification(page: Page) {
 test('5.1 Open the Shop / Product Listing Page', async ({ page }) => {
   await page.goto('https://curevana.com/product');
   await handleAgeVerification(page);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 
   await expect(page).toHaveTitle(/Shop Curevana/);
   await expect(page.getByText(/Showing 1[–-]16 of 30 results/)).toBeVisible();
@@ -135,13 +135,13 @@ test('5.5 Use Pagination (Page 2)', async ({ page }) => {
   // The button name might be "2" or "Go to page 2"
   const page2Btn = page.getByRole('button', { name: /page 2/i }).or(page.getByRole('button', { name: /^2$/, exact: true }));
   await page2Btn.click({ force: true });
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 
   await expect(page.getByText(/Showing 17[–-]30 of 30 results/)).toBeVisible();
 
   const page1Btn = page.getByRole('button', { name: /page 1/i }).or(page.getByRole('button', { name: /^1$/, exact: true }));
   await page1Btn.click({ force: true });
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
   await expect(page.getByText(/Showing 1[–-]16 of 30 results/)).toBeVisible();
 
   await page.screenshot({ path: 'screenshots/5.5_pagination.png' });
@@ -156,7 +156,7 @@ test('5.6 Add Product to Cart from Listing Card', async ({ page }) => {
   test.setTimeout(90000);
   await page.goto('https://curevana.com/product');
   await handleAgeVerification(page);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 
   // Scroll the first ADD TO CART button into view and click it
   const firstAddToCart = page.getByRole('button', { name: 'ADD TO CART' }).first();

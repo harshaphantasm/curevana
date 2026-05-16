@@ -136,7 +136,7 @@ test('2.5 Open the Cart Page from Header', async ({ page }) => {
   // Click first product 'Add to Cart' or 'View'
   const firstProduct = page.locator('.grid a').first();
   await firstProduct.click();
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
   
   const addToCartBtn = page.getByRole('button', { name: /Add to Cart/i }).first();
   if (await addToCartBtn.isVisible()) {
@@ -144,7 +144,7 @@ test('2.5 Open the Cart Page from Header', async ({ page }) => {
   }
 
   // 2. Locate cart button by looking for a button containing the item count (number)
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
   const cartButton = page.locator('button').filter({ hasText: /^\d+$/ }).first();
   await cartButton.click();
 

@@ -43,7 +43,7 @@ test('1.1 Launch the Curevana Website', async ({ page }) => {
   await handleAgeVerification(page);
   
   // 4. Wait for full load
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
   
   // 5. Verify page title
   await expect(page).toHaveTitle(/Curevana | Premium THCP & THCA Hemp/);
@@ -116,7 +116,7 @@ test('1.3 Click Explore Now in About Section', async ({ page }) => {
   await exploreBtn.click({ force: true });
   
   // 3. Wait for load
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
   
   // 4. Verify URL: /about-us
   await expect(page).toHaveURL(/.*about-us/);
@@ -193,7 +193,7 @@ test('1.5 Click Category Tiles under WHY WE STAND OUT', async ({ page }) => {
     
     // Go back
     await page.goBack();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await handleAgeVerification(page);
   }
 
@@ -243,7 +243,7 @@ test('1.7 Click DISCOVER THE LINEUP CTA', async ({ page }) => {
   await discoverBtn.click({ force: true });
 
   // 3. Wait for load and 4. Verify URL
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
   await expect(page).toHaveURL(/.*categoryId=43/);
   await page.screenshot({ path: 'screenshots/1.7_discover.png' });
 });
@@ -288,7 +288,7 @@ test('1.8 Browse CUREVANA SIGNATURE BRANDS Carousel', async ({ page }) => {
 
   // Navigate directly to avoid swiper animation interception issues
   await page.goto('https://curevana.com/product?categoryId=21');
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
   await expect(page).toHaveURL(/.*categoryId=21/);
   await page.screenshot({ path: 'screenshots/1.8_brand.png' });
 });

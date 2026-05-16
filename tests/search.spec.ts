@@ -53,7 +53,7 @@ test('3.1 Search for a Product', async ({ page }) => {
   await page.keyboard.press('Enter');
 
   // 6. Verify THCA products returned (wait for network to settle)
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
   // Check for presence of products containing THCA (case insensitive)
   const resultsContainer = page.locator('main').first();
   await expect(resultsContainer).toContainText(/THCA/i);

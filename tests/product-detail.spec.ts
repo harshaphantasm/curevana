@@ -37,7 +37,7 @@ test('6.1 Open a Product Detail Page', async ({ page }) => {
   // 1. Navigate to /product
   await page.goto('https://curevana.com/product');
   await handleAgeVerification(page);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 
   // 2. Click product title or image ('CUREVANA 1G PREMIUM THCA PREROLL')
   const productLink = page.getByRole('link', { name: /CUREVANA 1G PREMIUM THCA PREROLL/i }).first();
@@ -45,7 +45,7 @@ test('6.1 Open a Product Detail Page', async ({ page }) => {
   await productLink.click({ force: true });
 
   // 3. Wait for load
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 
   // 4. Verify URL contains the product slug
   await expect(page).toHaveURL(/.*\/product\/curevana-1g-premium-thca-preroll/i, { timeout: 15000 });
@@ -69,7 +69,7 @@ test('6.2 Switch Main Image via Thumbnails', async ({ page }) => {
   // 1. Navigate to product detail page directly
   await page.goto('https://curevana.com/product/curevana-1g-premium-thca-preroll');
   await handleAgeVerification(page);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 
   // Look for thumbnail images (ignoring the main image)
   // Adjust locator if the class name is specific
@@ -106,7 +106,7 @@ test('6.3 Click a Category Chip on Product Page', async ({ page }) => {
   // 1. Navigate to product detail page
   await page.goto('https://curevana.com/product/curevana-1g-premium-thca-preroll');
   await handleAgeVerification(page);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 
   // 2. Click 'PRE ROLLS' chip
   const preRollsChip = page.getByRole('link', { name: 'PRE ROLLS' }).first();
@@ -118,7 +118,7 @@ test('6.3 Click a Category Chip on Product Page', async ({ page }) => {
 
     // 3. Click back
     await page.goBack();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   }
 
   // Capture screenshot
@@ -134,7 +134,7 @@ test('6.4 Select a Flavor Variant', async ({ page }) => {
   // 1. Navigate to product detail page
   await page.goto('https://curevana.com/product/curevana-1g-premium-thca-preroll');
   await handleAgeVerification(page);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 
   // List of flavor options to click through
   const flavors = ['WEDDING CAKE', 'STRAWBERRY COUGH', 'BLUE DREAM', 'GREEN CRACK', 'GRANDDADY PURPLE'];
@@ -163,7 +163,7 @@ test('6.5 Increase Quantity and Add to Cart', async ({ page }) => {
   // 1. Navigate to product detail page
   await page.goto('https://curevana.com/product/curevana-1g-premium-thca-preroll');
   await handleAgeVerification(page);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 
   // 2. Select preferred flavor variant (optional, but good practice)
   const flavorBtn = page.getByRole('button', { name: /WEDDING CAKE/i }).first();
@@ -189,7 +189,7 @@ test('6.5 Increase Quantity and Add to Cart', async ({ page }) => {
   }
 
   // 7. Click Add To Cart
-  const addToCartBtn = page.getByRole('button', { name: /ADD TO CART/i }).first();
+  const addToCartBtn = page.locator('button[name="add-to-cart"], button.single_add_to_cart_button, button:has-text("Add To Cart"), button:has-text("Add to cart")').first();
   await addToCartBtn.click({ force: true });
   
   // 8. Wait for cart to update
@@ -213,7 +213,7 @@ test('6.6 Use Buy Now for Express Checkout', async ({ page }) => {
   // 1. Navigate to product detail page
   await page.goto('https://curevana.com/product/curevana-1g-premium-thca-preroll');
   await handleAgeVerification(page);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 
   // 2. Select flavor variant (try generic first available)
   const flavorBtn = page.locator('.variable-items-wrapper button, .variations button, .swatches button').first();
@@ -252,7 +252,7 @@ test('6.7 Browse Best Sellers Related Products', async ({ page }) => {
   // 1. Navigate to product detail page
   await page.goto('https://curevana.com/product/curevana-1g-premium-thca-preroll');
   await handleAgeVerification(page);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 
   // 2. Scroll to 'Best sellers' section
   const bestSellersHeading = page.getByRole('heading', { name: /Best sellers/i }).first();
@@ -261,7 +261,7 @@ test('6.7 Browse Best Sellers Related Products', async ({ page }) => {
   }
 
   // 3. Find a related product (e.g. by ADD TO CART button on a card)
-  const relatedAddToCart = page.getByRole('button', { name: /ADD TO CART/i }).nth(1); // the 2nd one is usually a related product
+  const relatedAddToCart = page.locator('button[name="add-to-cart"], button.single_add_to_cart_button, button:has-text("Add To Cart"), button:has-text("Add to cart"), .product-type-simple .add_to_cart_button').nth(1);
   if (await relatedAddToCart.isVisible()) {
     await relatedAddToCart.scrollIntoViewIfNeeded();
   }
