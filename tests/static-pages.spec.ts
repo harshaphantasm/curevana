@@ -49,8 +49,8 @@ test('14.1 Open the About Us Page', async ({ page }) => {
   await expect(page).toHaveTitle(/About Curevana/i);
 
   // Step 4: Verify About Us content displayed
-  // We'll verify that a main heading or content block containing 'About' is visible
-  const heading = page.getByRole('heading', { name: /About/i }).first();
+  // We'll verify that the 'Vision' heading is visible on the page
+  const heading = page.getByRole('heading', { name: /Vision/i }).first();
   await expect(heading).toBeVisible();
 
   // Capture screenshot
@@ -212,11 +212,15 @@ test('14.7 Open the Wholesale Page (External)', async ({ page }) => {
   // Step 3: Verify URL: https://smokevana.com/register
   await expect(page).toHaveURL(/.*smokevana\.com\/register/i);
 
+  // Wait for either the Smokevana age gate OR the registration form to appear
+  const smokevanaAgeBtn = page.getByRole('button', { name: "Yes, I'm 21+" });
+  if (await smokevanaAgeBtn.waitFor({ state: 'visible', timeout: 5000 }).then(() => true).catch(() => false)) {
+    await smokevanaAgeBtn.click({ force: true });
+  }
+
   // Step 4: Verify Smokevana registration page shown
-  // We look for a registration form or a relevant heading to ensure it loaded
   const formVisible = page.locator('form').first();
-  const headingVisible = page.getByRole('heading', { name: /Register|Wholesale/i }).first();
-  await expect(headingVisible.or(formVisible)).toBeVisible();
+  await expect(formVisible).toBeVisible({ timeout: 10000 });
 
   // Capture screenshot of the new page
   await page.screenshot({ path: 'screenshots/14.7_wholesale.png', fullPage: false });

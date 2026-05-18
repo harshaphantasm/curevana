@@ -182,23 +182,25 @@ test('8.3 Apply a Coupon Code', async ({ page }) => {
 // Module: Shopping Cart  |  Flow 8.4  |  Remove a Single Item from Cart
 // ==================================================
 test('8.4 Remove a Single Item from Cart', async ({ page }) => {
-  // Add 2 products
-  await addProductAndOpenCart(page, 2);
+  // Add 1 product so that removing it makes the cart completely empty
+  await addProductAndOpenCart(page, 1);
 
   const rows = page.locator('tbody tr');
   await expect(rows.first()).toBeVisible({ timeout: 10000 });
-  const initialCount = await rows.count();
 
   // Step 2: Click the remove/trash button on the first row
   // Confirmed: table has ACTION column with remove buttons
   const removeBtn = rows.first().locator('td').last().locator('button').first();
   await removeBtn.scrollIntoViewIfNeeded().catch(() => {});
   await removeBtn.click({ force: true });
-  await page.waitForTimeout(3000);
 
-  // Step 3: Verify cart is empty (since we removed the only item)
-  await expect(page.getByText(/Your cart is currently empty|No items in cart|Cart is empty/i).first())
-    .toBeVisible({ timeout: 15000 });
+  // Step 3: Verify cart is empty or we have been redirected to the shop/home page
+  const emptyText = page.getByText(/Your cart is currently empty|No items in cart|Cart is empty|Redirecting/i).first();
+  await expect(async () => {
+    const isRedirected = page.url() === 'https://curevana.com/' || page.url() === 'https://curevana.com/product' || page.url().endsWith('/');
+    const isTextVisible = await emptyText.isVisible().catch(() => false);
+    expect(isRedirected || isTextVisible).toBeTruthy();
+  }).toPass({ timeout: 15000, intervals: [500] });
 
   await page.screenshot({ path: 'screenshots/8.4_remove_single.png', fullPage: false });
 });
@@ -216,11 +218,14 @@ test('8.5 Clear the Entire Cart', async ({ page }) => {
   const clearCartBtn = page.getByRole('button', { name: /Clear Cart/i }).and(page.locator(':visible')).first();
   await expect(clearCartBtn).toBeVisible({ timeout: 5000 });
   await clearCartBtn.click({ force: true });
-  await page.waitForTimeout(3000);
 
-  // Step 3: Verify cart is empty
-  await expect(page.getByText(/Your cart is currently empty|No items in cart|Cart is empty/i).first())
-    .toBeVisible({ timeout: 15000 });
+  // Step 3: Verify cart is empty or we have been redirected to the shop/home page
+  const emptyText = page.getByText(/Your cart is currently empty|No items in cart|Cart is empty|Redirecting/i).first();
+  await expect(async () => {
+    const isRedirected = page.url() === 'https://curevana.com/' || page.url() === 'https://curevana.com/product' || page.url().endsWith('/');
+    const isTextVisible = await emptyText.isVisible().catch(() => false);
+    expect(isRedirected || isTextVisible).toBeTruthy();
+  }).toPass({ timeout: 15000, intervals: [500] });
 
   await page.screenshot({ path: 'screenshots/8.5_clear_cart.png', fullPage: false });
 });

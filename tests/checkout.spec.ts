@@ -35,13 +35,13 @@ async function prepareCheckout(page: Page) {
   await page.waitForLoadState('domcontentloaded');
 
   // Step 1: Navigate to product page
-  await page.goto('https://curevana.com/product/curevana-1g-premium-thca-preroll');
+  await page.goto('https://curevana.com/product/curevana-thc-a-diamond-infused-prerolls-2g-2pc-6ct');
   await page.waitForLoadState('domcontentloaded');
   await handleAgeVerification(page);
   await page.waitForTimeout(500);
 
   // Step 2: Select flavor
-  const flavorBtn = page.getByRole('button', { name: /WEDDING CAKE/i }).and(page.locator(':visible')).first();
+  const flavorBtn = page.getByRole('button', { name: /WHITE ROLEX|BAMBAM ICE/i }).and(page.locator(':visible')).first();
   if (await flavorBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
     await flavorBtn.evaluate(b => (b as HTMLElement).click());
     await page.waitForTimeout(500);
@@ -64,86 +64,72 @@ async function prepareCheckout(page: Page) {
 // Test Case Title: Fill Shipping Address (Same as Billing)
 // ==================================================
 test('9.1 Fill Shipping Address (Same as Billing)', async ({ page }) => {
-  // Step 1 – Add product -> cart -> Proceed to Checkout
+  // Step 1: Add product → cart → Proceed to Checkout
   await prepareCheckout(page);
 
-  // Step 2 – Verify 'Shipping Address' expanded
-  const shippingHeading = page.locator('text=/Shipping Address|Billing details|Billing|Checkout/i').first();
-  await expect(shippingHeading).toBeVisible({ timeout: 30000 });
+  // Step 2: Verify 'Shipping Address' expanded
+  const shippingHeader = page.getByRole('button', { name: 'Shipping Address', exact: true }).first();
+  await expect(shippingHeader).toBeVisible({ timeout: 30000 });
+  await expect(page.getByPlaceholder('First name').first()).toBeVisible({ timeout: 10000 });
 
-  // Step 3 – Fill Shipping Information
-  // First Name
-  await page.locator('input[name="billing_first_name"], input[name="firstName"], input[placeholder*="First name" i]').first().fill('John');
-  // Last Name
-  await page.getByPlaceholder(/Last name/i).first().fill('Doe');
-  // Email
-  await page.getByPlaceholder(/Email address/i).first().fill('john.doe@example.com');
-  // Phone
-  await page.getByPlaceholder(/Phone number/i).first().fill('5551234567');
+  // Step 3: Fill: First=John, Last=Doe, Email=john.doe@example.com, Phone=5551234567, Addr=123 Main St, Apt 4B, City=Joliet, State=Illinois, ZIP=60436
+  await page.getByPlaceholder('First name').first().fill('John');
+  await page.getByPlaceholder('Last name').first().fill('Doe');
+  await page.getByPlaceholder('Email address').first().fill('john.doe@example.com');
+  await page.getByPlaceholder('Phone number').first().fill('5551234567');
   
-  // Address line 1
-  const addressInput = page.getByPlaceholder(/Enter your address/i).first();
+  const addressInput = page.getByPlaceholder('Enter your address').first();
   await addressInput.fill('123 Main St');
-  await page.waitForTimeout(1500); // Wait for autocomplete dropdown
+  await page.waitForTimeout(2000); // Wait for autocomplete
   await addressInput.press('ArrowDown');
   await addressInput.press('Enter');
   await page.waitForTimeout(1000);
-  
-  // Address line 2 (Apt)
-  await page.getByPlaceholder(/Apartment, suite/i).first().fill('Apt 4B');
-  
-  // City
-  await page.locator('input[name="city"], input[placeholder*="City" i]').first().fill('Joliet');
-  
-  // State
-  // State could be an input or a select/dropdown. We try input first, fallback to select.
-  const stateLocator = page.locator('[name="state"], [name="region"], input[placeholder*="State" i]').first();
-  const tagName = await stateLocator.evaluate(el => el.tagName.toLowerCase()).catch(() => 'input');
-  if (tagName === 'select') {
-    await stateLocator.selectOption({ label: 'Illinois' }).catch(() => stateLocator.selectOption({ value: 'IL' }));
+
+  const aptInput = page.getByPlaceholder('Apartment, suite, etc. (optional)').first();
+  if (await aptInput.isVisible()) {
+    await aptInput.fill('Apt 4B');
+  }
+
+  await page.getByPlaceholder('City').first().fill('Joliet');
+
+  const stateDropdown = page.locator('select#state').first();
+  if (await stateDropdown.isVisible({ timeout: 5000 }).catch(() => false)) {
+    await stateDropdown.selectOption({ label: 'Illinois' }).catch(() => stateDropdown.selectOption({ value: 'IL' }));
   } else {
-    await stateLocator.fill('Illinois');
+    const stateInput = page.locator('input[placeholder*="State" i]').first();
+    await stateInput.fill('Illinois');
   }
-  
-  // ZIP
-  await page.locator('input[name="postalCode"], input[placeholder*="Postal code" i]').first().fill('60436');
 
-  // Step 4 – Verify Country pre-set=US
-  const countryLocator = page.locator('select[name="country"], input[name="country"]').first();
+  await page.getByPlaceholder('Postal code').first().fill('60436');
+
+  // Step 4: Verify Country pre-set=US
+  const countryLocator = page.locator('select[name="country"], input[name="country"], [placeholder="Country"]').first();
   const countryValue = await countryLocator.inputValue().catch(() => '');
-  expect(countryValue).toMatch(/US|United States/i);
+  const countryText = await countryLocator.innerText().catch(() => '');
+  expect(countryValue + countryText).toMatch(/US|United States/i);
 
-  // Step 5 – Check 'Use Shipping Address as Billing'
-  const sameAsBillingCheckbox = page.locator('label').filter({ hasText: /Use Shipping Address as Billing/i }).locator('input[type="checkbox"]').first();
-  if (await sameAsBillingCheckbox.isVisible().catch(() => false)) {
-    const isChecked = await sameAsBillingCheckbox.isChecked().catch(() => false);
-    if (!isChecked) {
-      await sameAsBillingCheckbox.evaluate(b => (b as HTMLElement).click()).catch(() => sameAsBillingCheckbox.check({ force: true }));
-    }
+  // Step 5: Check 'Use Shipping Address as Billing'
+  const checkbox = page.locator('input[type="checkbox"]').nth(0);
+  await checkbox.scrollIntoViewIfNeeded();
+  const isChecked = await checkbox.isChecked().catch(() => false);
+  if (!isChecked) {
+    await checkbox.click({ force: true });
+    await page.waitForTimeout(2000);
   }
 
-  // Step 6 – Verify Billing collapses/auto-fills
-  // If the billing form exists, verify it is hidden or not visible
-  const billingSection = page.getByText(/Billing Address/i).nth(1);
-  if (await billingSection.isVisible().catch(() => false)) {
-    // If visible, maybe check it's auto filled? The prompt says "Verify Billing collapses/auto-fills".
-    // We'll just verify no empty required billing inputs are visible.
-  }
+  // Step 6: Verify Billing collapses/auto-fills
+  await expect(page.getByPlaceholder('First name').last()).toHaveValue('John');
 
-  // Screenshot before continuing
   await page.screenshot({ path: 'screenshots/9.1_shipping_filled.png', fullPage: false });
 
-  // Step 7 – Click 'Continue to Payment'
-  const continueBtn = page.getByRole('button', { name: /Continue to Payment|Proceed to Payment|Next/i }).first();
+  // Step 7: Click 'Continue to Payment'
+  const continueBtn = page.locator('button:has-text("Continue to Payment"), button:has-text("Proceed to Payment"), button:has-text("Continue to payment")').first();
   await continueBtn.scrollIntoViewIfNeeded();
   await continueBtn.click({ force: true });
 
-  // Step 8 – Wait 3s -> verify page advances
+  // Step 8: Wait 3s → verify page advances
   await page.waitForTimeout(3000);
-  
-  // Verify advance (could be an accordion expanding or URL change or success message)
-  // We'll check that a payment element becomes visible or shipping form is collapsed
-  const paymentHeading = page.getByText(/Payment Method|Credit Card|Card Details/i).first();
+  const paymentHeading = page.locator('text=/Payment Method|Credit Card|Card Details/i').first();
   await expect(paymentHeading).toBeVisible({ timeout: 10000 });
 });
 
@@ -156,97 +142,93 @@ test('9.2 Fill Shipping and Billing Separately', async ({ page }) => {
   // Pre-conditions: Cart has items; user on checkout page
   await prepareCheckout(page);
 
-  // Step 1 – Fill Shipping (John Doe – as 9.1)
-  await page.locator('input[name="billing_first_name"], input[name="firstName"], input[placeholder*="First name" i]').first().fill('John');
-  await page.getByPlaceholder(/Last name/i).first().fill('Doe');
-  await page.getByPlaceholder(/Email address/i).first().fill('john.doe@example.com');
-  await page.getByPlaceholder(/Phone number/i).first().fill('5551234567');
-  const bAddressInput = page.getByPlaceholder(/Enter your address/i).first();
-  await bAddressInput.fill('123 Main St');
-  await page.waitForTimeout(1500);
-  await bAddressInput.press('ArrowDown');
-  await bAddressInput.press('Enter');
-  await page.waitForTimeout(1000);
+  // Step 1: Fill Shipping (John Doe – as 9.1)
+  await page.getByPlaceholder('First name').first().fill('John');
+  await page.getByPlaceholder('Last name').first().fill('Doe');
+  await page.getByPlaceholder('Email address').first().fill('john.doe@example.com');
+  await page.getByPlaceholder('Phone number').first().fill('5551234567');
   
-  await page.locator('input[name="city"], input[placeholder*="City" i]').first().fill('Joliet');
-  const stateLocator = page.locator('[name="state"], [name="region"], input[placeholder*="State" i]').first();
-  if ((await stateLocator.evaluate(el => el.tagName.toLowerCase()).catch(() => 'input')) === 'select') {
-    await stateLocator.selectOption({ label: 'Illinois' }).catch(() => stateLocator.selectOption({ value: 'IL' }));
-  } else {
-    await stateLocator.fill('Illinois');
-  }
-  await page.locator('input[name="postalCode"], input[placeholder*="Postal code" i]').first().fill('60436');
-
-  // Step 2 – Keep 'Use Shipping as Billing' unchecked
-  const sameAsBillingCheckbox = page.locator('label').filter({ hasText: /Use Shipping Address as Billing/i }).locator('input[type="checkbox"]').first();
-  if (await sameAsBillingCheckbox.isVisible().catch(() => false)) {
-    const isChecked = await sameAsBillingCheckbox.isChecked().catch(() => false);
-    if (isChecked) {
-      await sameAsBillingCheckbox.evaluate(b => (b as HTMLElement).click()).catch(() => sameAsBillingCheckbox.uncheck({ force: true }));
-    }
-  } else {
-    // If checkbox is not found by role, try finding a label and clicking it
-    const billingToggle = page.locator('label').filter({ hasText: /Use Shipping Address as Billing/i }).first();
-    if (await billingToggle.isVisible().catch(() => false)) {
-       await billingToggle.click({ force: true });
-    }
-  }
+  const addressInput = page.getByPlaceholder('Enter your address').first();
+  await addressInput.fill('123 Main St');
+  await page.waitForTimeout(2000);
+  await addressInput.press('ArrowDown');
+  await addressInput.press('Enter');
   await page.waitForTimeout(1000);
 
-  // Step 3 – Expand Billing section
-  // Clicking the toggle above should expand it. We verify Billing Address header is visible.
-  const billingSection = page.getByText(/Billing Address/i).last();
-  await billingSection.scrollIntoViewIfNeeded();
+  const aptInput = page.getByPlaceholder('Apartment, suite, etc. (optional)').first();
+  if (await aptInput.isVisible()) {
+    await aptInput.fill('Apt 4B');
+  }
 
-  // Step 4 – Fill Billing
-  // Because placeholder might match shipping, we scope to the billing container.
-  // We can find the container by looking at the parent of the billing heading, 
-  // or simply use `.last()` if there are exactly two inputs (Shipping then Billing)
-  
-  await page.getByPlaceholder(/First name/i).last().fill('Jane');
-  await page.getByPlaceholder(/Last name/i).last().fill('Smith');
-  
-  // Some sites only ask for address info in billing, not email/phone again
-  const billingEmail = page.getByPlaceholder(/Email address/i).last();
-  if (await billingEmail.isVisible()) {
-      await billingEmail.fill('jane.smith@example.com');
+  await page.getByPlaceholder('City').first().fill('Joliet');
+
+  const stateDropdown = page.locator('select#state').first();
+  if (await stateDropdown.isVisible({ timeout: 5000 }).catch(() => false)) {
+    await stateDropdown.selectOption({ label: 'Illinois' }).catch(() => stateDropdown.selectOption({ value: 'IL' }));
+  } else {
+    const stateInput = page.locator('input[placeholder*="State" i]').first();
+    await stateInput.fill('Illinois');
   }
-  
-  const billingPhone = page.getByPlaceholder(/Phone number/i).last();
-  if (await billingPhone.isVisible()) {
-      await billingPhone.fill('5559876543');
+
+  await page.getByPlaceholder('Postal code').first().fill('60436');
+
+  // Step 2: Keep 'Use Shipping as Billing' unchecked
+  const checkbox = page.locator('input[type="checkbox"]').nth(0);
+  await checkbox.scrollIntoViewIfNeeded();
+  const isChecked = await checkbox.isChecked().catch(() => false);
+  if (isChecked) {
+    await checkbox.click({ force: true });
+    await page.waitForTimeout(2000);
   }
+
+  // Step 3: Expand Billing section
+  const billingHeader = page.getByRole('button', { name: 'Billing Address', exact: true }).first();
+  await billingHeader.scrollIntoViewIfNeeded();
+  await billingHeader.click({ force: true });
+  await page.waitForTimeout(1000);
+
+  // Step 4: Fill Billing: First=Jane, Last=Smith, Email=jane.smith@example.com, Phone=5559876543, Addr=456 Oak Ave, City=Chicago, State=Illinois, ZIP=60601
+  await page.getByPlaceholder('First name').last().fill('Jane');
+  await page.getByPlaceholder('Last name').last().fill('Smith');
   
-  const billingAddressInput = page.getByPlaceholder(/Enter your address/i).last();
+  const emailInput = page.getByPlaceholder('Email address').last();
+  if (await emailInput.isVisible()) {
+    await emailInput.fill('jane.smith@example.com');
+  }
+
+  const phoneInput = page.getByPlaceholder('Phone number').last();
+  if (await phoneInput.isVisible()) {
+    await phoneInput.fill('5559876543');
+  }
+
+  const billingAddressInput = page.getByPlaceholder('Enter your address').last();
   await billingAddressInput.fill('456 Oak Ave');
-  await page.waitForTimeout(1500);
+  await page.waitForTimeout(2000);
   await billingAddressInput.press('ArrowDown');
   await billingAddressInput.press('Enter');
   await page.waitForTimeout(1000);
-  
-  await page.locator('input[name="city"], input[placeholder*="City" i]').last().fill('Chicago');
-  
-  const bStateLocator = page.locator('[name="state"], [name="region"], input[placeholder*="State" i]').last();
-  if ((await bStateLocator.evaluate(el => el.tagName.toLowerCase()).catch(() => 'input')) === 'select') {
-    await bStateLocator.selectOption({ label: 'Illinois' }).catch(() => bStateLocator.selectOption({ value: 'IL' }));
-  } else {
-    await bStateLocator.fill('Illinois');
-  }
-  
-  await page.locator('input[name="postalCode"], input[placeholder*="Postal code" i]').last().fill('60601');
 
-  // Screenshot before continuing
+  await page.getByPlaceholder('City').last().fill('Chicago');
+
+  const bStateDropdown = page.locator('select#state').last();
+  if (await bStateDropdown.isVisible({ timeout: 5000 }).catch(() => false)) {
+    await bStateDropdown.selectOption({ label: 'Illinois' }).catch(() => bStateDropdown.selectOption({ value: 'IL' }));
+  } else {
+    const bStateInput = page.locator('input[placeholder*="State" i]').last();
+    await bStateInput.fill('Illinois');
+  }
+
+  await page.getByPlaceholder('Postal code').last().fill('60601');
+
   await page.screenshot({ path: 'screenshots/9.2_billing_filled.png', fullPage: false });
 
-  // Step 5 – Click 'Continue to Payment'
-  const continueBtn = page.getByRole('button', { name: /Continue to Payment|Proceed to Payment|Next/i }).first();
+  // Step 5: Click 'Continue to Payment'
+  const continueBtn = page.locator('button:has-text("Continue to Payment"), button:has-text("Proceed to Payment"), button:has-text("Continue to payment")').first();
   await continueBtn.scrollIntoViewIfNeeded();
   await continueBtn.click({ force: true });
 
-  // Step 6 – Wait 3s -> verify page advances
+  // Step 6: Wait 3s → verify page advances
   await page.waitForTimeout(3000);
-  
-  // Verify advance
-  const paymentHeading = page.getByText(/Payment Method|Credit Card|Card Details/i).first();
+  const paymentHeading = page.locator('text=/Payment Method|Credit Card|Card Details/i').first();
   await expect(paymentHeading).toBeVisible({ timeout: 10000 });
 });
